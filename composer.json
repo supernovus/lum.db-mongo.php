@@ -1,0 +1,40 @@
+{
+  "name": "lum/lum-db-mongo",
+  "description": "Libraries for working with MongoDB",
+  "license": "MIT",
+  "authors":
+  [
+    {
+      "name": "Timothy Totten",
+      "email": "supernovus@gmail.com",
+      "role": "Original Author"
+    }
+  ],
+  "require":
+  {
+    "lum/lum-db": "^3.0",
+    "mongodb/mongodb": "^1.17.2"
+  },
+  "require-dev":
+  {
+    "lum/lum-test": "^3.1"
+  },
+  "autoload":
+  {
+    "psr-4":
+    {
+      "Lum\\DB\\Mongo\\": "lib"
+    }
+  },
+  "scripts":
+  {
+    "test": "lumtest"
+  },
+  "extra":
+  {
+    "branch-alias":
+    {
+      "dev-main": "1.x-dev"
+    }
+  }
+}
