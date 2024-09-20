@@ -132,7 +132,7 @@ abstract class Model extends Simple implements \Iterator, \ArrayAccess
         {
           $wrap = $this->wrapRow($result, $opts);
           if (isset($wrap))
-            $wrapper[] = $wrap;
+            $wrapped[] = $wrap;
         }
         return $wrapped;
       }
