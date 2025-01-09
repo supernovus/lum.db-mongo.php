@@ -232,7 +232,12 @@ class Item extends \Lum\DB\Child
 
   /**
    * Apply MongoDB update statements directly.
-   * This is not for general purpose usage.
+   *
+   * This is for use cases where update statements (patches) may be generated
+   * from frontend (typically JS) code rather than being done by the backend.
+   *
+   * @param array|BSONDocument $updates Update statements to apply.
+   * @param array $opts (Optional) Mostly used by `to_bson()` call.
    */
   public function saveUpdates ($updates, $opts=[])
   {
