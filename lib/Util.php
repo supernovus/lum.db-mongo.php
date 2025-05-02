@@ -89,6 +89,10 @@ class Util
    *
    * You'd think simply passing a BSON document to json_encode() would work,
    * but it sadly doesn't always. So this is a wrapper.
+   * 
+   * TODO: 
+   * - Move to \MongoDB\BSON\Document for conversion purposes.
+   * - Remove all legacy stuff (prep for driver/library v2.x)
    */
   static function toJSON ($input, $opts=[])
   {
