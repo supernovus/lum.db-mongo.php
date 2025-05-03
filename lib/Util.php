@@ -2,12 +2,35 @@
 
 namespace Lum\DB\Mongo;
 
+use DateTime;
 use \MongoDB\BSON;
 use \MongoDB\BSON\ObjectId;
 use \MongoDB\Model\{BSONArray,BSONDocument};
 
 class Util
 {
+  
+  // This would be so much nicer in JS...
+  static function ejsonStrEnc()
+  {
+    return [
+      '$numberDecimal' => BSON\Decimal128::class,
+      '$numberDouble'  => fn($v) => floatval($v),
+      '$numberLong'    => BSON\Int64::class,
+      '$numberInt'     => fn($v) => intval($v, 10),
+      '$oid'           => BSON\ObjectId::class,
+    ];
+  }
+
+  // Ditto obviously ;p
+  static function ejsonKeyEnc()
+  {
+    return [
+      '$maxKey' => BSON\MaxKey::class,
+      '$minKey' => BSON\MinKey::class,
+    ];
+  }
+
   static function toArray ($data, array $opts=[])
   {
 #    error_log("Util::toArray(data, ".json_encode($opts).")");
@@ -82,6 +105,101 @@ class Util
       }
     }
     return $array;
+  }
+
+  /**
+   * If EJSON has been sent to a web service, we need to ensure
+   * the Extended syntax gets converted back into MongoDB objects.
+   * 
+   * @param array $data   EJSON data decoded as a PHP array.
+   * @param array $opts   (Optional) Reserved for future use.
+   * @return mixed The value after all decoding has been done.
+   */
+  static function toMongoDB (array $data, array $opts=[])
+  {
+    if (isset($data['$binary']) 
+      && is_array($data['$binary'])
+      && is_string($data['$binary']['base64']))
+    { // Limited support for this, no sub-types.
+      return new BSON\Binary(base64_decode($data['$binary']['base64']));
+    }
+
+    if (isset($data['$date']))
+    { // DateTime is easy
+      if (is_string($data['$date']))
+      {
+        return new BSON\UTCDateTime(new DateTime($data['$date']));
+      }
+      elseif (is_array($data['$date']) 
+        && is_string($data['$date']['$numberLong']))
+      {
+        $ts = new BSON\Int64($data['$date']['$numberLong']);
+        return new BSON\UTCDateTime($ts);
+      }
+      else
+      {
+        error_log("Invalid date format: ".serialize($data));
+        return null;
+      }
+    }
+
+    if (isset($data['$regularExpression']) 
+      && is_array($data['$regularExpression'])
+      && is_string($data['$regularExpression']['pattern']))
+    {
+      $regex = $data['$regularExpression']['pattern'];
+      $reopt = $data['$regularExpression']['options'] ?? '';
+      return new BSON\Regex($regex, $reopt);
+    }
+
+    if (isset($data['$timestamp'])
+      && is_array($data['$timestamp'])
+      && is_int($data['$timestamp']['t'])
+      && is_int($data['$timestamp']['i']))
+    {
+      return new BSON\Timestamp(
+        $data['$timestamp']['i'],
+        $data['$timestamp']['t']);
+    }
+
+    $encs = self::ejsonStrEnc();
+
+    foreach ($encs as $code => $handler)
+    {
+      if (isset($data[$code]) && is_string($data[$code]))
+      {
+        if (is_callable($handler))
+        {
+          return $handler($data[$code]);
+        }
+        else
+        {
+          return new $handler($data[$code]);
+        }
+      }
+    }
+
+    $encs = self::ejsonKeyEnc();
+
+    foreach ($encs as $code => $handler)
+    {
+      if (isset($data[$code]) && $data[$code] === 1)
+      {
+        return new $handler();
+      }
+    }
+
+    // If we reached here, the array wasn't any built-in MongoDB type.
+
+    foreach ($data as $key => $val)
+    {
+      if (is_array($val))
+      {
+        $data[$key] = self::toMongoDB($val, $opts);
+      }
+    }
+
+    return $data;
   }
 
   /**
